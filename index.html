@@ -129,6 +129,13 @@
   .hist-row:last-child{border-bottom:0}
   .hist-line{font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .hist-detail{font-size:13px;color:var(--sub);margin-top:6px;line-height:1.7}
+  /* バックアップ案内バナー */
+  .backup-banner{background:#fff6ed;border-left:5px solid var(--warn);border-radius:var(--r);
+    box-shadow:var(--shadow);padding:12px 14px;margin-bottom:12px;
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .backup-banner .bmsg{flex:1;min-width:180px;font-weight:700;font-size:14px;color:#8a5a00;line-height:1.45}
+  .backup-banner .bbtns{display:flex;gap:8px;flex-wrap:wrap}
+  .backup-banner .btn{min-height:44px}
 </style>
 </head>
 <body>
@@ -149,6 +156,9 @@
 </div>
 
 <main>
+  <!-- ===== バックアップ案内バナー（全タブ共通・最上部） ===== -->
+  <div id="backupBanner" class="backup-banner hide"></div>
+
   <!-- ===== 在庫 ===== -->
   <section id="tab-stock">
     <div class="toolbar">
@@ -310,7 +320,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = 4;
+const APP_VERSION = 5;
 const LS_KEY = "zaiko_v1";
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
@@ -972,6 +982,10 @@ async function doExportJson(){
   }catch(e){ console.warn("写真の書き出しに失敗", e); }
   obj.photos = photos;
   download(JSON.stringify(obj,null,2),"在庫バックアップ_"+new Date().toISOString().slice(0,10)+".json","application/json");
+  // 書き出し成功→最終バックアップ日を記録（日付のみ）。バナーは再判定で自動的に消える
+  state.settings.lastBackup = new Date().toISOString().slice(0,10);
+  save();
+  checkBackupReminder();
   toast(`⬇ バックアップを書き出しました（写真${Object.keys(photos).length}枚）`);
 }
 $("#exportJson").onclick=doExportJson;
@@ -1112,6 +1126,40 @@ $("#wipe").onclick=()=>{ if(confirm("すべてのデータを消去します。�
   photoClear(); Array.from(photoURLCache.keys()).forEach(revokePhotoURL); photoIds=new Set();
   save(); render(); toast("消去しました"); } };
 
+/* ---------- バックアップ案内バナー ---------- */
+let backupLaterDismissed=false;   // 当セッションのみ「あとで」で非表示（リロードで再表示）
+let backupBannerMsg=null;         // 現在描画中の文言（変わった時だけ中身を作り直す）
+// "YYYY-MM-DD" と今日の差（日数・時刻無視）。未設定/不正は null
+function daysSinceDate(iso){
+  const m=String(iso==null?"":iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(!m) return null;
+  const then=new Date(+m[1], +m[2]-1, +m[3]);
+  if(isNaN(then.getTime())) return null;
+  const n=new Date(); const today=new Date(n.getFullYear(), n.getMonth(), n.getDate());
+  return Math.floor((today.getTime()-then.getTime())/86400000);
+}
+function checkBackupReminder(){
+  const el=$("#backupBanner"); if(!el) return;
+  const d=daysSinceDate(state.settings.lastBackup);
+  const due=(d===null) || (d>=7);
+  const show = state.items.length>0 && due && !backupLaterDismissed;
+  if(!show){ el.classList.add("hide"); return; }
+  const msg = (d===null)
+    ? "📥 まだ一度もバックアップしていません。端末が壊れるとデータが消えます"
+    : `📥 前回のバックアップから${d}日。そろそろバックアップを`;
+  if(backupBannerMsg!==msg){   // 文言が変わった時だけ作り直す（毎回作り直さない）
+    backupBannerMsg=msg;
+    el.innerHTML=`<div class="bmsg">${esc(msg)}</div>
+      <div class="bbtns">
+        <button class="btn ok" id="backupNow">今すぐバックアップ</button>
+        <button class="btn ghost" id="backupLater">あとで</button>
+      </div>`;
+    $("#backupNow").onclick=()=>{ doExportJson(); };   // 成功→lastBackup更新→再判定でバナーが消える
+    $("#backupLater").onclick=()=>{ backupLaterDismissed=true; checkBackupReminder(); };
+  }
+  el.classList.remove("hide");
+}
+
 /* ---------- render dispatch ---------- */
 function render(){
   const active=$("#nav button.active").dataset.tab;
@@ -1121,6 +1169,7 @@ function render(){
   else if(active==="master"){ renderMaster(); renderSettings(); }
   // 発注バッジは常に更新
   const c=state.items.filter(needsOrder).length; $("#orderCount").textContent=c?`(${c})`:"";
+  checkBackupReminder();
 }
 
 /* ---------- Service Worker（https/localhost配信時のみ。file://では自動スキップ） ---------- */
