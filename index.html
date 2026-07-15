@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#0d6ea3" />
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<title>在庫発注アプリ</title>
+<style>
+  :root{
+    --bg:#f4f6f9; --card:#fff; --ink:#1e2a35; --sub:#6b7a88; --line:#e2e8ef;
+    --brand:#0d6ea3; --brand-d:#0a577f; --ok:#1f9d55; --warn:#e6a100; --danger:#d64545;
+    --ci:#0d6ea3; --ori:#8a5a00; --shadow:0 1px 3px rgba(20,40,60,.08),0 4px 16px rgba(20,40,60,.06);
+    --r:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic UI",sans-serif;
+    font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%}
+  .topbar{position:sticky;top:0;z-index:20;box-shadow:var(--shadow)}
+  header{background:var(--brand);color:#fff;
+    padding:calc(env(safe-area-inset-top) + 10px) 14px 10px}
+  header .row{display:flex;align-items:center;gap:10px}
+  header h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.02em;flex:1}
+  header .badge{font-size:11px;background:rgba(255,255,255,.2);padding:3px 8px;border-radius:20px}
+  nav{display:flex;background:var(--card);border-bottom:1px solid var(--line)}
+  nav button{flex:1;border:0;background:none;padding:12px 4px;font-size:13px;color:var(--sub);
+    font-weight:600;border-bottom:3px solid transparent;cursor:pointer}
+  nav button .ic{display:block;font-size:20px;line-height:1;margin-bottom:3px}
+  nav button.active{color:var(--brand);border-bottom-color:var(--brand)}
+  main{padding:14px;max-width:820px;margin:0 auto;padding-bottom:80px}
+  .card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden}
+  .card .hd{padding:12px 14px;font-weight:700;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+  .card .bd{padding:12px 14px}
+  .muted{color:var(--sub);font-size:13px}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  input,select,textarea{font-family:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--line);
+    border-radius:10px;background:#fff;color:var(--ink);width:100%}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--brand);border-color:var(--brand)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:10px;
+    padding:11px 14px;font-size:15px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff;white-space:nowrap}
+  .btn:active{transform:translateY(1px)}
+  .btn.sec{background:#eef3f7;color:var(--brand-d)}
+  .btn.ghost{background:none;color:var(--brand);border:1px solid var(--line)}
+  .btn.danger{background:var(--danger)}
+  .btn.ok{background:var(--ok)}
+  .btn.sm{padding:7px 10px;font-size:13px}
+  .btn.rowbtn{flex:none;min-height:42px;padding:0 12px;font-size:12px}
+  .btn.block{width:100%}
+  .search{flex:1;min-width:160px}
+  /* item rows */
+  .item{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line)}
+  .item:last-child{border-bottom:0}
+  .item.low{background:#fff6f5}
+  .item .info{flex:1;min-width:0}
+  .item .nm{font-weight:700;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .item .meta{font-size:12px;color:var(--sub);margin-top:2px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .tag{font-size:11px;padding:1px 7px;border-radius:20px;font-weight:700}
+  .tag.ci{background:#e3f0f8;color:var(--ci)}
+  .tag.ori{background:#f7edd6;color:var(--ori)}
+  .tag.low{background:#fde3e0;color:var(--danger)}
+  .stepper{display:flex;align-items:center;gap:2px}
+  .stepper button{width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:#fff;
+    font-size:22px;font-weight:700;color:var(--brand);cursor:pointer;line-height:1}
+  .stepper button:active{background:#eef3f7}
+  .stepper .qty{width:52px;text-align:center;font-size:19px;font-weight:800;padding:0 2px}
+  .stepper input.qty{border:0;background:none;height:42px}
+  .empty{text-align:center;color:var(--sub);padding:40px 16px}
+  .empty .big{font-size:40px;margin-bottom:8px}
+  /* order gauge */
+  .gauge{height:14px;background:#e9eff4;border-radius:20px;overflow:hidden;margin:8px 0 4px}
+  .gauge > div{height:100%;background:linear-gradient(90deg,var(--warn),var(--ok));width:0;transition:width .3s}
+  .sumline{display:flex;justify-content:space-between;font-weight:700;font-size:15px}
+  .free{color:var(--ok);font-weight:800}
+  .pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;background:#eef3f7;color:var(--sub);font-weight:700}
+  .pill.today{background:#d9f2e2;color:var(--ok)}
+  /* modal */
+  .modal{position:fixed;inset:0;background:rgba(20,30,40,.45);z-index:40;display:none;align-items:flex-end;justify-content:center}
+  .modal.open{display:flex}
+  .sheet{background:var(--card);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;
+    padding:16px 16px calc(env(safe-area-inset-bottom) + 16px)}
+  @media(min-width:560px){.modal{align-items:center}.sheet{border-radius:18px}}
+  .sheet h2{margin:2px 0 12px;font-size:18px}
+  .field{margin-bottom:11px}
+  .field label{display:block;font-size:12px;color:var(--sub);font-weight:700;margin-bottom:4px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .row-end{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+  .codebox{background:#f7f9fb;border:1px solid var(--line);border-radius:10px;padding:10px 12px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;white-space:pre-wrap;word-break:break-all}
+  .toast{position:fixed;bottom:calc(env(safe-area-inset-bottom) + 20px);left:50%;transform:translateX(-50%);
+    background:#243544;color:#fff;padding:11px 18px;border-radius:24px;font-size:14px;font-weight:700;z-index:60;
+    box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .25s}
+  .toast.show{opacity:1}
+  .seg{display:flex;background:#eef3f7;border-radius:12px;padding:3px;gap:3px}
+  .seg button{flex:1;border:0;background:none;padding:9px 4px;border-radius:9px;font-weight:700;font-size:13px;color:var(--sub);cursor:pointer}
+  .seg button.on{background:#fff;color:var(--brand);box-shadow:var(--shadow)}
+  .hide{display:none!important}
+  .item.mrow{flex-direction:column;align-items:stretch}
+  .mctrl{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+  .mctrl label{font-size:12px;color:var(--sub);font-weight:700;display:flex;align-items:center;gap:3px}
+  .mctrl input.mini{width:52px;text-align:center;padding:7px 4px;font-size:15px;font-weight:700}
+  .mctrl select.area{padding:7px 8px;font-size:13px;max-width:150px}
+  .ghd{padding:10px 14px;font-weight:700;background:#eef3f7;color:var(--brand-d);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+  .pick{display:flex;align-items:center;padding-right:4px}
+  .pick input{width:24px;height:24px;accent-color:var(--brand)}
+  .item.unpick{opacity:.4}
+  .steplbl{font-size:12px;font-weight:800;color:var(--brand-d);margin:12px 0 6px;display:flex;align-items:center;gap:6px}
+  .steplbl .n{background:var(--brand);color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+  .approve{background:linear-gradient(180deg,#22a05a,#1a8c4c)}
+  .diff-pos{color:var(--ok);font-weight:700}
+  .diff-neg{color:var(--danger);font-weight:700}
+  .fabnote{font-size:12px;color:var(--sub);text-align:center;margin-top:2px}
+  a.link{color:var(--brand);font-weight:700;text-decoration:none}
+  /* 商品写真サムネイル */
+  .thumb{width:46px;height:46px;border-radius:10px;background:#eef3f7;display:flex;
+    align-items:center;justify-content:center;font-size:20px;flex:none;overflow:hidden}
+  .thumb img{width:100%;height:100%;object-fit:cover}
+  .mrow-top{display:flex;align-items:center;gap:10px}
+  .photo-field{display:flex;align-items:center;gap:12px}
+  .photo-prev{width:96px;height:96px;border-radius:14px;background:#eef3f7;display:flex;
+    align-items:center;justify-content:center;font-size:40px;overflow:hidden;flex:none}
+  .photo-prev img{width:100%;height:100%;object-fit:cover}
+  .photo-btns{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+  /* 発注履歴 */
+  .hist-row{padding:9px 2px;border-bottom:1px solid var(--line);cursor:pointer}
+  .hist-row:last-child{border-bottom:0}
+  .hist-line{font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .hist-detail{font-size:13px;color:var(--sub);margin-top:6px;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="topbar">
+<header>
+  <div class="row">
+    <h1>在庫発注</h1>
+    <span class="badge" id="verBadge">v1</span>
+  </div>
+</header>
+
+<nav id="nav">
+  <button data-tab="stock" class="active"><span class="ic">📦</span>在庫</button>
+  <button data-tab="order"><span class="ic">🧾</span>発注 <span id="orderCount"></span></button>
+  <button data-tab="count"><span class="ic">🔢</span>棚卸し</button>
+  <button data-tab="master"><span class="ic">⚙️</span>マスタ</button>
+</nav>
+</div>
+
+<main>
+  <!-- ===== 在庫 ===== -->
+  <section id="tab-stock">
+    <div class="toolbar">
+      <input class="search" id="stockSearch" placeholder="🔍 品名で検索" />
+      <select id="stockArea" style="max-width:150px"><option value="all">全分野</option></select>
+      <select id="stockFilter" style="max-width:140px">
+        <option value="all">すべて</option>
+        <option value="low">要発注のみ</option>
+        <option value="Ci">Ci</option>
+        <option value="オリエンタル">オリエンタル</option>
+      </select>
+    </div>
+    <div id="stockList"></div>
+  </section>
+
+  <!-- ===== 発注 ===== -->
+  <section id="tab-order" class="hide">
+    <div class="muted" style="margin-bottom:10px">発注点を下回った品目と、在庫タブで「＋発注」した品目が仕入先ごとに並びます。数量は調整できます。発注を確定すると「入荷待ち」に移り、届いたら「入荷確認」で在庫へ加算します。</div>
+
+    <!-- Ci -->
+    <div class="card">
+      <div class="hd"><span class="tag ci">Ci</span> Ciモール（送料無料まで積み上げ）</div>
+      <div class="bd" id="ciBody"></div>
+    </div>
+
+    <!-- オリエンタル -->
+    <div class="card">
+      <div class="hd"><span class="tag ori">オリエンタル</span> オリエンタル（月・水の午後に引き取り）</div>
+      <div class="bd" id="oriBody"></div>
+    </div>
+
+    <!-- 入荷待ち -->
+    <div class="card">
+      <div class="hd">🚚 入荷待ち</div>
+      <div class="bd" id="incomingBody"></div>
+    </div>
+
+    <!-- 発注履歴 -->
+    <div class="card">
+      <div class="hd">📜 発注履歴</div>
+      <div class="bd" id="histBody"></div>
+    </div>
+  </section>
+
+  <!-- ===== 棚卸し ===== -->
+  <section id="tab-count" class="hide">
+    <div class="card"><div class="bd">
+      <div class="muted">実際に数えた数を入力→「実棚で在庫を上書き」で帳簿在庫を更新します。差異と在庫金額を確認できます。</div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button class="btn ok" id="applyCount">✔ 実棚で在庫を上書き</button>
+        <button class="btn sec" id="exportCount">⬇ 棚卸しCSV</button>
+        <button class="btn ghost sm" id="clearCount">入力クリア</button>
+      </div>
+      <div class="sumline" style="margin-top:12px">
+        <span>在庫金額（実棚）</span><span id="countTotal">¥0</span>
+      </div>
+    </div></div>
+    <div id="countList"></div>
+  </section>
+
+  <!-- ===== マスタ ===== -->
+  <section id="tab-master" class="hide">
+    <div class="toolbar">
+      <button class="btn" id="addItem">＋ 品目を追加</button>
+      <select id="masterArea" style="max-width:140px"><option value="all">全分野</option></select>
+      <input class="search" id="masterSearch" placeholder="🔍 検索" />
+    </div>
+    <div class="muted" style="margin:-4px 2px 8px">各行で <b>分野・発注点(点)・発注数(数)</b> をその場で編集できます。分野で絞り込んでまとめて設定すると速いです。品名をタップすると編集画面が開き、<b>商品写真</b>も登録できます。</div>
+    <div id="masterList"></div>
+
+    <div class="card"><div class="hd">📥 データの取り込み・書き出し（バックアップ）</div><div class="bd">
+      <div class="muted">初期登録はExcelでCSVを作って一括取込が速いです。列: 名前,分野,カテゴリ,仕入先,商品コード,単価,入数,現在数,発注点,発注数,メモ</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+        <button class="btn sec sm" id="importCsv">CSV取込</button>
+        <button class="btn sec sm" id="exportCsv">CSV書出</button>
+        <button class="btn sec sm" id="exportJson">JSONバックアップ</button>
+        <button class="btn sec sm" id="importJson">JSON復元</button>
+        <button class="btn ghost sm" id="loadSample">サンプル投入</button>
+        <button class="btn danger sm" id="wipe">全消去</button>
+      </div>
+      <input type="file" id="fileInput" accept=".csv,.json" class="hide" />
+    </div></div>
+
+    <div class="card"><div class="hd">⚙️ 設定</div><div class="bd">
+      <div class="field">
+        <label>分野（サブカテゴリ）一覧　※カンマ区切り・並び順どおりに表示</label>
+        <input type="text" id="setAreas" placeholder="一般,矯正,インプラント,P治療,小児プレゼント,予防,補綴・修復,外科・麻酔" />
+      </div>
+      <div class="field">
+        <label>Ci 送料無料ライン（円）</label>
+        <input type="number" id="setFreeShip" />
+      </div>
+      <div class="field">
+        <label>Ci クイックオーダーのURL</label>
+        <input type="text" id="setCiUrl" />
+      </div>
+      <div class="field">
+        <label>オリエンタル連絡先（LINE/電話メモ・任意）</label>
+        <input type="text" id="setOriContact" placeholder="例: LINEで発注 / TEL 0000-00-0000" />
+      </div>
+      <button class="btn ok sm" id="saveSettings">設定を保存</button>
+    </div></div>
+  </section>
+</main>
+
+<!-- 品目 編集モーダル -->
+<div class="modal" id="editModal">
+  <div class="sheet">
+    <h2 id="editTitle">品目を追加</h2>
+    <div class="field photo-field">
+      <div class="photo-prev" id="f_photoPrev">📦</div>
+      <div class="photo-btns">
+        <label class="btn sec sm">📷 写真を追加/変更<input type="file" id="f_photoInput" accept="image/*" class="hide"></label>
+        <button type="button" class="btn ghost sm hide" id="f_photoDel">写真を削除</button>
+      </div>
+    </div>
+    <div class="field"><label>品名 *</label><input id="f_name" /></div>
+    <div class="grid2">
+      <div class="field"><label>分野（サブカテゴリ）</label><select id="f_area"></select></div>
+      <div class="field"><label>仕入先</label>
+        <select id="f_sup"><option>Ci</option><option>オリエンタル</option></select>
+      </div>
+    </div>
+    <div class="field"><label>カテゴリ（材料種別・任意）</label><input id="f_cat" placeholder="例: 歯科材料 / 物販 / 薬品" /></div>
+    <div class="field"><label>Ci商品コード（Ciのみ）</label><input id="f_code" placeholder="Ciの商品コード" /></div>
+    <div class="grid2">
+      <div class="field"><label>単価（円）</label><input id="f_price" type="number" inputmode="numeric" /></div>
+      <div class="field"><label>入数/単位</label><input id="f_unit" placeholder="例: 1箱50本" /></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>現在数</label><input id="f_stock" type="number" inputmode="numeric" /></div>
+      <div class="field"><label>発注点（これ以下で発注）</label><input id="f_rop" type="number" inputmode="numeric" /></div>
+    </div>
+    <div class="field"><label>発注数（1回に頼む数）</label><input id="f_oq" type="number" inputmode="numeric" /></div>
+    <div class="field"><label>メモ</label><input id="f_note" /></div>
+    <div class="row-end">
+      <button class="btn danger sm hide" id="deleteItem">削除</button>
+      <button class="btn ghost sm" id="cancelEdit">キャンセル</button>
+      <button class="btn ok" id="saveItem">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- CSV取込 方法選択 -->
+<div class="modal" id="csvModal">
+  <div class="sheet">
+    <h2>CSVの取り込み方法</h2>
+    <div class="muted" style="margin-bottom:14px">既存データにどう反映しますか？</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn" id="csvAdd">追加取込（今のデータに足す）</button>
+      <button class="btn danger" id="csvReplace">全置換（すべて入れ替える）</button>
+      <button class="btn ghost" id="csvCancel">やめる</button>
+    </div>
+    <div class="muted" style="margin-top:10px;font-size:12px">全置換でも、仕入先＋商品コード（無ければ品名）が一致する品目は写真・棚卸し入力を引き継ぎます。</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const APP_VERSION = 4;
+const LS_KEY = "zaiko_v1";
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const yen = n => "¥" + (Math.round(n||0)).toLocaleString("ja-JP");
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+// 全角数字→半角（数値入力のparse前に通す）
+function zNum(v){ return String(v==null?"":v)
+  .replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0))
+  .replace(/．/g,".").replace(/[－ー―‐]/g,"-"); }
+
+/* ---------- state ---------- */
+const DEFAULT_AREAS = ["一般","矯正","インプラント","P治療","小児プレゼント","予防","補綴・修復","外科・麻酔"];
+let state = { version: APP_VERSION, items: [], settings: {
+  freeShip: 5000,
+  ciUrl: "https://www.ci-medical.com/pages/howto_quickorder",
+  oriContact: "",
+  areas: DEFAULT_AREAS.slice()
+}, counts: {}, excluded: {}, history: [] };
+
+// 品名/カテゴリから分野を推定（分野未設定の移行・取込時に使用）
+function assignArea(name,category){
+  const s=(name||"")+" "+(category||"");
+  if(/ブラケット|アーチワイヤー|ワイヤー|エラスティック|オーソ|結紮|リガチャ|バンド|チェーン|セパレー|ミニスクリュー|りっぷる|筋機能|矯正/.test(s)) return "矯正";
+  if(/インプラント|アバット|ヒーリング|カバースクリュー|GBR|メンブレン|骨補填|テルプラグ|サージカル ?ガイド/.test(s)) return "インプラント";
+  if(/けしごむ|消しゴム|ガチャ|カプセル|迷路|宝石|パズル|リング|ユニコーン|おもちゃ|人気者|シマエナガ|プレゼント|景品|六面体/.test(s)) return "小児プレゼント";
+  if(/ミノサイクリン|ペリオ|SRP|スケーラー|キュレット|歯周|ポケット|ハンドスケー/.test(s)) return "P治療";
+  if(/フッ素|フロス|歯間ブラシ|歯間ﾌﾞﾗｼ|歯ブラシ|タフト|チェックアップ|システマ|ハミガキ|デンタル|バーニッシュ|シーラント|プロフィー/.test(s)) return "予防";
+  if(/レジン|セメント|ボンド|印象|アルジ|ダイヤストーン|アローマファイン|コア|パナビア|エステコア|ベラシア|ジーセム|スーパーボンド|エッチ|プライマー/.test(s)) return "補綴・修復";
+  if(/エピリド|セプトカイン|オーラ注|麻酔|メス|縫合|ドレープ|ガウン/.test(s)) return "外科・麻酔";
+  return "一般";
+}
+
+function load(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){ const p = JSON.parse(raw);
+      state.items = p.items||[];
+      state.settings = Object.assign(state.settings, p.settings||{});
+      state.counts = p.counts||{};
+      state.excluded = p.excluded||{};
+      state.history = p.history||[];
+    }
+  }catch(e){ console.warn("load失敗", e); }
+  if(!Array.isArray(state.items)) state.items = [];               // ブリック防止
+  if(!Array.isArray(state.history)) state.history = [];
+  if(!state.excluded || typeof state.excluded!=="object") state.excluded = {};
+  if(!Array.isArray(state.settings.areas) || !state.settings.areas.length) state.settings.areas = DEFAULT_AREAS.slice();
+  // 分野未設定の品目を移行・incoming(入荷待ち)を正規化
+  state.items.forEach(it=>{
+    if(!it.area) it.area = assignArea(it.name,it.category);
+    if(it.incoming==null) it.incoming = 0;
+  });
+}
+function save(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); return true; }
+  catch(e){ toast("⚠️ 保存に失敗（容量不足の可能性）"); return false; }
+}
+// 消去耐性（他アプリの教訓）
+if(navigator.storage && navigator.storage.persist){ navigator.storage.persist(); }
+
+/* ---------- helpers ---------- */
+const isLow = it => Number(it.stock) <= Number(it.reorderPoint||0);
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show");
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),1800); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+// 発注候補: (在庫+入荷待ち) が発注点以下 or 手動フラグ（入荷待ち中は再登場させない＝二重発注防止）
+const needsOrder = it => (Number(it.stock||0)+Number(it.incoming||0)) <= Number(it.reorderPoint||0) || it.flag;
+// 日付 "YYYY-MM-DD" → "M/D"
+function mmdd(iso){ if(!iso) return ""; const p=String(iso).split("-"); return (parseInt(p[1])||"?")+"/"+(parseInt(p[2])||"?"); }
+
+/* ---------- 商品写真（IndexedDB） ---------- */
+const PHOTO_DB = "zaiko_photos";
+const PHOTO_STORE = "photos";
+let photoDBPromise = null;
+let photoIds = new Set();            // 写真を持つ品目idの集合（起動時にロード）
+const photoURLCache = new Map();     // id → objectURL / dataURL
+
+function photoDB(){
+  if(photoDBPromise) return photoDBPromise;
+  photoDBPromise = new Promise((res,rej)=>{
+    if(!window.indexedDB){ rej(new Error("IndexedDB非対応")); return; }
+    const req = indexedDB.open(PHOTO_DB, 1);
+    req.onupgradeneeded = ()=>{ const db=req.result; if(!db.objectStoreNames.contains(PHOTO_STORE)) db.createObjectStore(PHOTO_STORE); };
+    req.onsuccess = ()=>res(req.result);
+    req.onerror = ()=>rej(req.error);
+  });
+  photoDBPromise.catch(()=>{ photoDBPromise=null; });
+  return photoDBPromise;
+}
+function photoTx(mode, fn){
+  return photoDB().then(db=>new Promise((res,rej)=>{
+    const tx = db.transaction(PHOTO_STORE, mode);
+    const req = fn(tx.objectStore(PHOTO_STORE));
+    req.onsuccess = ()=>res(req.result);
+    req.onerror = ()=>rej(req.error);
+  }));
+}
+function photoPut(id, blob){
+  return photoTx("readwrite", st=>st.put(blob, id))
+    .catch(()=>blobToDataURL(blob).then(durl=>photoTx("readwrite", st=>st.put(durl, id)))); // Safari旧版: BlobがputできなければdataURL文字列で保存
+}
+function photoGet(id){ return photoTx("readonly", st=>st.get(id)).catch(()=>null); }
+function photoDel(id){ return photoTx("readwrite", st=>st.delete(id)).catch(()=>null); }
+function photoClear(){ return photoTx("readwrite", st=>st.clear()).catch(()=>null); }
+function photoKeys(){ return photoTx("readonly", st=>st.getAllKeys()).then(ks=>new Set(ks||[])).catch(()=>new Set()); }
+
+function blobToDataURL(blob){
+  return new Promise((res,rej)=>{ const rd=new FileReader();
+    rd.onload=()=>res(rd.result); rd.onerror=()=>rej(rd.error); rd.readAsDataURL(blob); });
+}
+function dataURLToBlob(durl){
+  const m = String(durl).match(/^data:([^;,]+)?(;base64)?,(.*)$/);
+  if(!m) throw new Error("dataURL形式が不正");
+  const mime = m[1]||"image/jpeg";
+  if(m[2]){
+    const bin = atob(m[3]); const u8 = new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) u8[i] = bin.charCodeAt(i);
+    return new Blob([u8], {type:mime});
+  }
+  return new Blob([decodeURIComponent(m[3])], {type:mime});
+}
+async function getPhotoURL(id){
+  if(photoURLCache.has(id)) return photoURLCache.get(id);
+  let v = null;
+  try{ v = await photoGet(id); }catch(e){ return null; }
+  if(!v) return null;
+  const url = (typeof v==="string") ? v : URL.createObjectURL(v);
+  photoURLCache.set(id, url);
+  return url;
+}
+function revokePhotoURL(id){
+  const url = photoURLCache.get(id);
+  if(url && url.startsWith("blob:")) URL.revokeObjectURL(url);
+  photoURLCache.delete(id);
+}
+// 描画済みコンテナ内の .thumb を、写真がある品目だけ <img> に差し替え
+function hydratePhotos(container){
+  if(!container) return;
+  container.querySelectorAll(".thumb[data-thumb]").forEach(sp=>{
+    const id = sp.dataset.thumb;
+    if(!photoIds.has(id)) return;       // 写真なしは📦のまま
+    if(sp.querySelector("img")) return; // 差し替え済み
+    getPhotoURL(id).then(url=>{
+      if(!url || !sp.isConnected) return;
+      sp.innerHTML = `<img alt="" src="${url}">`;
+    });
+  });
+}
+function loadImgFromFile(file){
+  return new Promise((res,rej)=>{
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = ()=>{ URL.revokeObjectURL(url); res(img); };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); rej(new Error("画像を読み込めません")); };
+    img.src = url;
+  });
+}
+// 長辺384pxに縮小してJPEG Blob化（EXIF回転はcreateImageBitmap対応時のみ考慮）
+async function resizePhoto(file){
+  const MAX = 384;
+  let src = null;
+  if(window.createImageBitmap){
+    try{ src = await createImageBitmap(file, {imageOrientation:"from-image"}); }
+    catch(e){ try{ src = await createImageBitmap(file); }catch(e2){ src = null; } }
+  }
+  if(!src) src = await loadImgFromFile(file);
+  const sw = src.width || src.naturalWidth, sh = src.height || src.naturalHeight;
+  const k = Math.min(1, MAX/Math.max(sw,sh));
+  const w = Math.max(1, Math.round(sw*k)), h = Math.max(1, Math.round(sh*k));
+  const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+  cv.getContext("2d").drawImage(src, 0, 0, w, h);
+  if(src.close) src.close();
+  return new Promise(res=> cv.toBlob(b=>res(b), "image/jpeg", 0.8));
+}
+
+/* ---------- タブ ---------- */
+$("#nav").addEventListener("click", e=>{
+  const b = e.target.closest("button[data-tab]"); if(!b) return;
+  $$("#nav button").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active");
+  ["stock","order","count","master"].forEach(t=> $("#tab-"+t).classList.toggle("hide", t!==b.dataset.tab));
+  render();
+});
+
+/* ---------- 在庫タブ ---------- */
+function areaOrderKey(a){ const i=(state.settings.areas||[]).indexOf(a); return i<0?99:i; }
+function fillAreaSelect(sel,withAll){
+  const set=new Set(state.settings.areas||[]);
+  state.items.forEach(it=> set.add(it.area||"一般"));
+  const arr=Array.from(set).sort((a,b)=>areaOrderKey(a)-areaOrderKey(b)||a.localeCompare(b,"ja"));
+  const cur=sel.value;
+  sel.innerHTML=(withAll?`<option value="all">全分野</option>`:"")+arr.map(a=>`<option value="${esc(a)}">${esc(a)}</option>`).join("");
+  if(cur && (cur==="all"||arr.includes(cur))) sel.value=cur;
+}
+function stockRow(it){ const no=needsOrder(it); const inc=parseInt(it.incoming)||0; return `
+    <div class="item ${no?'low':''}">
+      <span class="thumb" data-thumb="${it.id}">📦</span>
+      <div class="info" data-edit="${it.id}">
+        <div class="nm">${esc(it.name)}</div>
+        <div class="meta">
+          <span class="tag ${it.supplier==='Ci'?'ci':'ori'}">${esc(it.supplier)}</span>
+          ${it.category?`<span>${esc(it.category)}</span>`:""}
+          <span>発注点 ${it.reorderPoint||0}</span>
+          ${no?'<span class="tag low">要発注</span>':""}
+          ${inc>0?`<span class="pill">🚚入荷待ち+${inc}</span>`:""}
+        </div>
+      </div>
+      <button class="btn ${it.flag?'sec':'ghost'} rowbtn" data-flag="${it.id}">${it.flag?'発注解除':'＋発注'}</button>
+      <div class="stepper">
+        <button data-dec="${it.id}">−</button>
+        <input class="qty" data-qty="${it.id}" type="number" inputmode="numeric" value="${it.stock||0}" />
+        <button data-inc="${it.id}">＋</button>
+      </div>
+    </div>`; }
+function renderStock(){
+  fillAreaSelect($("#stockArea"),true);
+  const q = $("#stockSearch").value.trim().toLowerCase();
+  const f = $("#stockFilter").value;
+  const af = $("#stockArea").value;
+  let list = state.items.filter(it=>{
+    if(f==="low" && !needsOrder(it)) return false;
+    if((f==="Ci"||f==="オリエンタル") && it.supplier!==f) return false;
+    if(af!=="all" && (it.area||"一般")!==af) return false;
+    if(q && !((it.name||"")+(it.category||"")+(it.area||"")).toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const el = $("#stockList");
+  if(!state.items.length){ el.innerHTML = emptyState("品目がまだありません","「マスタ」タブで追加、またはサンプル投入から始めましょう"); return; }
+  if(!list.length){ el.innerHTML = emptyState("該当なし",""); return; }
+  const groups={};
+  list.forEach(it=>{ const a=it.area||"一般"; (groups[a]=groups[a]||[]).push(it); });
+  const keys=Object.keys(groups).sort((a,b)=>areaOrderKey(a)-areaOrderKey(b)||a.localeCompare(b,"ja"));
+  el.innerHTML="";
+  keys.forEach(a=>{
+    const items=groups[a].sort((x,y)=>(x.name||"").localeCompare(y.name||"","ja"));
+    const lowN=items.filter(needsOrder).length;
+    const card=document.createElement("div"); card.className="card";
+    card.innerHTML=`<div class="ghd">${esc(a)}<span class="muted" style="font-weight:400">${items.length}品${lowN?` ・<span style="color:var(--danger);font-weight:700">要発注${lowN}</span>`:''}</span></div>`
+      + items.map(stockRow).join("");
+    el.appendChild(card);
+  });
+  hydratePhotos(el);
+}
+function emptyState(t,s){ return `<div class="empty"><div class="big">📦</div><div style="font-weight:700">${esc(t)}</div><div class="muted">${esc(s)}</div></div>`; }
+
+$("#stockList").addEventListener("click", e=>{
+  const inc=e.target.closest("[data-inc]"), dec=e.target.closest("[data-dec]"),
+        fl=e.target.closest("[data-flag]"), ed=e.target.closest("[data-edit]");
+  if(inc){ chStock(inc.dataset.inc,+1); }
+  else if(dec){ chStock(dec.dataset.dec,-1); }
+  else if(fl){ const it=item(fl.dataset.flag); if(it){ it.flag=!it.flag; save(); render(); } }
+  else if(ed){ openEdit(ed.dataset.edit); }
+});
+$("#stockList").addEventListener("change", e=>{
+  const q=e.target.closest("[data-qty]"); if(!q) return;
+  const it=state.items.find(x=>x.id===q.dataset.qty); if(it){ it.stock=Math.max(0,parseInt(zNum(q.value))||0); save(); render(); }
+});
+function chStock(id,d){ const it=state.items.find(x=>x.id===id); if(!it) return;
+  it.stock=Math.max(0,(parseInt(it.stock)||0)+d); save(); render(); }
+
+$("#stockSearch").addEventListener("input", renderStock);
+$("#stockFilter").addEventListener("change", renderStock);
+$("#stockArea").addEventListener("change", renderStock);
+
+/* ---------- 発注タブ ---------- */
+function renderOrder(){
+  // H1: 除外フラグの自動掃除（対応品目が無い or 発注不要になったidを消す）
+  let exChanged=false;
+  Object.keys(state.excluded||{}).forEach(id=>{
+    const it=item(id);
+    if(!it || !needsOrder(it)){ delete state.excluded[id]; exChanged=true; }
+  });
+  if(exChanged) save();
+  const cand = state.items.filter(needsOrder);
+  // Ci
+  const ci = cand.filter(it=>it.supplier==="Ci");
+  const ciBody = $("#ciBody");
+  if(!ci.length){ ciBody.innerHTML = `<div class="muted">現在、Ciで発注が必要な品目はありません。</div>`; }
+  else{
+    const sel = ci.filter(it=>!state.excluded[it.id]);
+    const total = sel.reduce((s,it)=> s + (it.orderQty||1)*(it.price||0), 0);
+    const free = state.settings.freeShip||5000;
+    const pct = Math.min(100, total/free*100);
+    const remain = Math.max(0, free-total);
+    ciBody.innerHTML = `
+      <div class="muted" style="margin-bottom:6px">今回カゴに入れる品に✓（Ciは下のゲージが選択分で動きます）</div>
+      ${ci.map(orderRow).join("")}
+      <div class="gauge"><div style="width:${pct}%"></div></div>
+      <div class="sumline"><span>選択 ${sel.length}品 合計</span><span>${yen(total)}</span></div>
+      <div class="muted" style="margin:2px 0 4px">${remain>0?`あと <b>${yen(remain)}</b> で送料無料`:`<span class="free">✓ 送料無料に到達！</span>`}</div>
+      <div class="steplbl"><span class="n">1</span>スタッフ：コピー→Ciでカゴに投入</div>
+      <div class="codebox" id="ciCodes">${sel.map(it=>`${it.code||'(コード未設定)'}  ×${it.orderQty||1}  ${esc(it.name)}`).join("\n")||"（未選択）"}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn sec sm" id="copyCi">📋 コード＋数量をコピー</button>
+        <a class="btn sm" href="${esc(state.settings.ciUrl)}" target="_blank" rel="noopener">🛒 Ciクイックオーダーを開く</a>
+      </div>
+      <div class="steplbl"><span class="n">2</span>先生：カゴの内容を確認して承認・発注確定</div>
+      <button class="btn approve block" id="doneCi">✅ 承認して発注確定（在庫へ反映）</button>`;
+  }
+  // オリエンタル
+  const ori = cand.filter(it=>it.supplier==="オリエンタル");
+  const oriBody = $("#oriBody");
+  const dow = new Date().getDay(); // 0日..6土
+  const pickup = (dow===1||dow===3);
+  const dowName = ["日","月","火","水","木","金","土"][dow];
+  if(!ori.length){ oriBody.innerHTML = `<div class="muted">現在、オリエンタルで発注が必要な品目はありません。</div>
+    <div style="margin-top:8px"><span class="pill ${pickup?'today':''}">今日は${dowName}曜 ${pickup?'＝引き取り日':''}</span></div>`; }
+  else{
+    const oriSel = ori.filter(it=>!state.excluded[it.id]);
+    oriBody.innerHTML = `
+      <div style="margin-bottom:8px"><span class="pill ${pickup?'today':''}">今日は${dowName}曜 ${pickup?'＝引き取り日！':'（引き取りは月・水）'}</span></div>
+      <div class="muted" style="margin-bottom:6px">今回頼む品に✓</div>
+      ${ori.map(orderRow).join("")}
+      <div class="steplbl"><span class="n">1</span>スタッフ：リストを準備（画面提示 or コピー）</div>
+      <div class="codebox" id="oriCodes">${oriSel.map(it=>`・${esc(it.name)}  ×${it.orderQty||1}${it.unit?'（'+esc(it.unit)+'）':''}`).join("\n")||"（未選択）"}</div>
+      ${state.settings.oriContact?`<div class="muted" style="margin-top:6px">連絡先: ${esc(state.settings.oriContact)}</div>`:""}
+      <div style="margin-top:8px"><button class="btn sec sm" id="copyOri">📋 リストをコピー</button></div>
+      <div class="steplbl"><span class="n">2</span>先生：内容を確認して承認・発注確定</div>
+      <button class="btn approve block" id="doneOri">✅ 承認して発注確定（在庫へ反映）</button>`;
+  }
+  bindOrderActions();
+  renderIncoming();
+  renderHistory();
+  hydratePhotos($("#tab-order"));
+  // nav badge
+  const c = cand.length; $("#orderCount").textContent = c?`(${c})`:"";
+}
+function renderHistory(){
+  const el = $("#histBody"); if(!el) return;
+  const h = state.history||[];
+  if(!h.length){ el.innerHTML = `<div class="muted">まだ履歴がありません</div>`; return; }
+  el.innerHTML = h.slice(0,15).map((r,i)=>`
+    <div class="hist-row" data-hist="${i}">
+      <div class="hist-line">${mmdd(r.date)}　<span class="tag ${r.supplier==='Ci'?'ci':'ori'}">${esc(r.supplier)}</span>　${(r.items||[]).length}品　${yen(r.total)}</div>
+      <div class="hist-detail hide">${(r.items||[]).map(x=>`・${esc(x.name)} ×${x.qty||1}`).join("<br>")}</div>
+    </div>`).join("");
+  $$("#histBody .hist-row").forEach(row=>row.onclick=()=>{
+    const d = row.querySelector(".hist-detail"); if(d) d.classList.toggle("hide");
+  });
+}
+function renderIncoming(){
+  const el=$("#incomingBody"); if(!el) return;
+  const list=state.items.filter(it=>(parseInt(it.incoming)||0)>0)
+    .sort((a,b)=>(a.supplier||"").localeCompare(b.supplier||"","ja")||(a.name||"").localeCompare(b.name||"","ja"));
+  if(!list.length){ el.innerHTML=`<div class="muted">入荷待ちの品目はありません。発注を確定するとここに入ります。</div>`; return; }
+  el.innerHTML=`
+    <div style="margin-bottom:8px"><button class="btn sec sm" id="recvAll">すべて入荷確認</button></div>
+    ${list.map(it=>{ const inc=parseInt(it.incoming)||0; return `
+      <div class="item">
+        <span class="thumb" data-thumb="${it.id}">📦</span>
+        <div class="info">
+          <div class="nm">${esc(it.name)} ×${inc}</div>
+          <div class="meta">
+            <span class="tag ${it.supplier==='Ci'?'ci':'ori'}">${esc(it.supplier)}</span>
+            ${it.lastOrdered?`<span>発注日 ${mmdd(it.lastOrdered)}</span>`:""}
+          </div>
+        </div>
+        <button class="btn ok rowbtn" data-recv="${it.id}">✔ 入荷確認</button>
+      </div>`; }).join("")}`;
+  $$("#incomingBody [data-recv]").forEach(b=>b.onclick=()=>receiveIncoming(b.dataset.recv));
+  const ra=$("#recvAll"); if(ra) ra.onclick=receiveAllIncoming;
+}
+function receiveIncoming(id){
+  const it=item(id); if(!it) return;
+  const inc=parseInt(it.incoming)||0; if(inc<=0) return;
+  it.stock=(parseInt(it.stock)||0)+inc; it.incoming=0;
+  const ok=save(); render(); if(ok) toast(`✔ ${it.name} を入荷済みにしました`);
+}
+function receiveAllIncoming(){
+  const list=state.items.filter(it=>(parseInt(it.incoming)||0)>0);
+  if(!list.length) return;
+  if(!confirm(`入荷待ちの ${list.length}品すべてを入荷済み（在庫へ加算）にしますか？`)) return;
+  list.forEach(it=>{ it.stock=(parseInt(it.stock)||0)+(parseInt(it.incoming)||0); it.incoming=0; });
+  const ok=save(); render(); if(ok) toast(`✔ ${list.length}品を入荷済みにしました`);
+}
+function orderRow(it){
+  const inc = !state.excluded[it.id];
+  return `<div class="item ${inc?'':'unpick'}">
+    <label class="pick"><input type="checkbox" data-pick="${it.id}" ${inc?'checked':''}></label>
+    <span class="thumb" data-thumb="${it.id}">📦</span>
+    <div class="info">
+      <div class="nm">${esc(it.name)} ${it.flag?'<span class="pill">手動</span>':''}</div>
+      <div class="meta">
+        ${it.area&&it.area!=="一般"?`<span class="pill">${esc(it.area)}</span>`:""}
+        ${it.code?`<span>${esc(it.code)}</span>`:""}
+        <span>在庫 ${it.stock||0} / 発注点 ${it.reorderPoint||0}</span>
+        ${it.price?`<span>${yen(it.price)}</span>`:""}
+        ${it.lastOrdered?`<span>前回 ${mmdd(it.lastOrdered)}</span>`:""}
+      </div>
+    </div>
+    <div class="stepper">
+      <button data-oqdec="${it.id}">−</button>
+      <input class="qty" data-oq="${it.id}" type="number" inputmode="numeric" value="${it.orderQty||1}" />
+      <button data-oqinc="${it.id}">＋</button>
+    </div>
+  </div>`;
+}
+function bindOrderActions(){
+  $$("[data-oqinc]").forEach(b=>b.onclick=()=>chOQ(b.dataset.oqinc,+1));
+  $$("[data-oqdec]").forEach(b=>b.onclick=()=>chOQ(b.dataset.oqdec,-1));
+  $$("[data-oq]").forEach(inp=>inp.onchange=()=>{ const it=item(inp.dataset.oq); if(it){it.orderQty=Math.max(1,parseInt(zNum(inp.value))||1);save();render();}});
+  $$("[data-pick]").forEach(cb=>cb.onchange=()=>{ const id=cb.dataset.pick; if(cb.checked) delete state.excluded[id]; else state.excluded[id]=true; save(); render(); });
+  const cc=$("#copyCi"); if(cc) cc.onclick=()=>copyText($("#ciCodes").textContent,"Ciの注文内容をコピーしました");
+  const co=$("#copyOri"); if(co) co.onclick=()=>copyText($("#oriCodes").textContent,"オリエンタルの注文をコピーしました");
+  const dc=$("#doneCi"); if(dc) dc.onclick=()=>markOrdered("Ci");
+  const dor=$("#doneOri"); if(dor) dor.onclick=()=>markOrdered("オリエンタル");
+}
+const item = id => state.items.find(x=>x.id===id);
+function chOQ(id,d){ const it=item(id); if(it){ it.orderQty=Math.max(1,(parseInt(it.orderQty)||1)+d); save(); render(); } }
+function markOrdered(sup){
+  const sel=state.items.filter(it=>it.supplier===sup && needsOrder(it) && !state.excluded[it.id]);
+  if(!sel.length){ toast("今回発注する品が選択されていません"); return; }
+  const tot=sel.reduce((s,it)=>s+(it.orderQty||1)*(it.price||0),0);
+  const lines=sel.map(it=>`・${it.name} ×${it.orderQty||1}`).join("\n");
+  if(!confirm(`【${sup} 発注確定】${sel.length}品／合計 ${yen(tot)}\n\n${lines}\n\nこの内容で承認し、入荷待ちに登録しますか？`)) return;
+  const now=new Date().toISOString().slice(0,10);
+  // 発注履歴に記録（最新が先頭・最大100件）
+  if(!Array.isArray(state.history)) state.history=[];
+  state.history.unshift({ date: now, supplier: sup, total: tot,
+    items: sel.map(it=>({ name: it.name, qty: parseInt(it.orderQty)||1, price: it.price||0 })) });
+  if(state.history.length>100) state.history=state.history.slice(0,100);
+  sel.forEach(it=>{
+    it.incoming=(parseInt(it.incoming)||0)+(parseInt(it.orderQty)||1); // 在庫は据え置き・入荷待ちへ加算
+    it.flag=false; it.lastOrdered=now; delete state.excluded[it.id];
+  });
+  const ok=save(); render(); if(ok) toast(`✅ ${sup} ${sel.length}品を入荷待ちに登録しました`);
+}
+
+/* ---------- 棚卸しタブ ---------- */
+function renderCount(){
+  const el=$("#countList");
+  if(!state.items.length){ el.innerHTML=emptyState("品目がありません",""); $("#countTotal").textContent="¥0"; return; }
+  const list = state.items.slice().sort((a,b)=>(a.category||"").localeCompare(b.category||"","ja"));
+  const card=document.createElement("div"); card.className="card";
+  card.innerHTML = list.map(it=>{
+    const c = state.counts[it.id];
+    const has = c!==undefined && c!=="";
+    const diff = has ? (parseInt(zNum(c))||0)-(parseInt(it.stock)||0) : null;
+    return `<div class="item">
+      <span class="thumb" data-thumb="${it.id}">📦</span>
+      <div class="info">
+        <div class="nm">${esc(it.name)}</div>
+        <div class="meta"><span>帳簿 ${it.stock||0}</span>
+          ${has?`<span class="${diff>0?'diff-pos':diff<0?'diff-neg':''}">差異 ${diff>0?'+':''}${diff}</span>`:""}
+          ${it.price?`<span>${yen(it.price)}/個</span>`:""}
+        </div>
+      </div>
+      <div class="stepper"><input class="qty" style="width:64px" data-count="${it.id}" type="number" inputmode="numeric" placeholder="実数" value="${has?c:""}" /></div>
+    </div>`;
+  }).join("");
+  el.innerHTML=""; el.appendChild(card);
+  hydratePhotos(el);
+  updateCountTotal();
+}
+function updateCountTotal(){
+  let t=0; state.items.forEach(it=>{ const c=state.counts[it.id]; if(c!==undefined&&c!=="") t+=(parseInt(zNum(c))||0)*(it.price||0); });
+  $("#countTotal").textContent=yen(t);
+}
+$("#countList").addEventListener("input", e=>{
+  const c=e.target.closest("[data-count]"); if(!c) return;
+  state.counts[c.dataset.count]=c.value; save(); updateCountTotal();
+  const it=item(c.dataset.count); // 差異即時更新は再描画で
+});
+$("#countList").addEventListener("change", renderCount);
+$("#applyCount").onclick=()=>{
+  let n=0; state.items.forEach(it=>{ const c=state.counts[it.id]; if(c!==undefined&&c!==""){ it.stock=parseInt(zNum(c))||0; n++; }});
+  state.counts={}; const ok=save(); render(); if(ok) toast(`✔ ${n}品目を実棚で更新しました`);
+};
+$("#clearCount").onclick=()=>{ if(confirm("入力した棚卸し数をクリアしますか？")){ state.counts={}; save(); renderCount(); } };
+$("#exportCount").onclick=()=>{
+  const rows=[["品名","カテゴリ","仕入先","帳簿在庫","実棚","差異","単価","実棚金額"]];
+  state.items.forEach(it=>{ const c=state.counts[it.id]; const cnt=(c!==undefined&&c!=="")?parseInt(zNum(c))||0:"";
+    const diff=cnt===""?"":cnt-(parseInt(it.stock)||0);
+    rows.push([it.name,it.category||"",it.supplier,it.stock||0,cnt,diff,it.price||0,cnt===""?"":cnt*(it.price||0)]); });
+  downloadCsv(rows, "棚卸し_"+new Date().toISOString().slice(0,10)+".csv");
+};
+
+/* ---------- マスタタブ ---------- */
+function areaOptions(cur){
+  const set=new Set(state.settings.areas||[]); if(cur) set.add(cur);
+  return Array.from(set).sort((a,b)=>areaOrderKey(a)-areaOrderKey(b)||a.localeCompare(b,"ja"))
+    .map(a=>`<option value="${esc(a)}"${a===(cur||"一般")?" selected":""}>${esc(a)}</option>`).join("");
+}
+function renderMaster(){
+  fillAreaSelect($("#masterArea"),true);
+  const q=$("#masterSearch").value.trim().toLowerCase();
+  const af=$("#masterArea").value;
+  const el=$("#masterList");
+  let list=state.items.slice().sort((a,b)=>areaOrderKey(a.area||"一般")-areaOrderKey(b.area||"一般")||(a.name||"").localeCompare(b.name||"","ja"));
+  if(af!=="all") list=list.filter(it=>(it.area||"一般")===af);
+  if(q) list=list.filter(it=>((it.name||"")+(it.category||"")+(it.code||"")).toLowerCase().includes(q));
+  if(!state.items.length){ el.innerHTML=emptyState("品目がありません","「＋品目を追加」またはCSV取込／サンプル投入から"); return; }
+  if(!list.length){ el.innerHTML=emptyState("該当なし",""); return; }
+  const card=document.createElement("div"); card.className="card";
+  card.innerHTML=list.map(it=>`
+    <div class="item mrow">
+      <div class="mrow-top">
+        <span class="thumb" data-thumb="${it.id}">📦</span>
+        <div class="info" data-edit="${it.id}">
+          <div class="nm">${esc(it.name)} ✏️</div>
+          <div class="meta">
+            <span class="tag ${it.supplier==='Ci'?'ci':'ori'}">${esc(it.supplier)}</span>
+            ${it.code?`<span>${esc(it.code)}</span>`:""}
+            <span>在庫${it.stock||0}</span>
+            ${(parseInt(it.incoming)||0)>0?`<span class="pill">🚚入荷待ち+${parseInt(it.incoming)||0}</span>`:""}
+            ${it.price?`<span>${yen(it.price)}</span>`:""}
+          </div>
+        </div>
+      </div>
+      <div class="mctrl">
+        <select class="area" data-area="${it.id}">${areaOptions(it.area||"一般")}</select>
+        <label>点<input class="mini" data-rop="${it.id}" type="number" inputmode="numeric" value="${it.reorderPoint||0}"></label>
+        <label>数<input class="mini" data-moq="${it.id}" type="number" inputmode="numeric" value="${it.orderQty||1}"></label>
+      </div>
+    </div>`).join("");
+  el.innerHTML=""; el.appendChild(card);
+  hydratePhotos(el);
+}
+$("#masterList").addEventListener("click", e=>{ const ed=e.target.closest("[data-edit]"); if(ed) openEdit(ed.dataset.edit); });
+$("#masterList").addEventListener("change", e=>{
+  const rop=e.target.closest("[data-rop]"), moq=e.target.closest("[data-moq]"), ar=e.target.closest("[data-area]");
+  if(rop){ const it=item(rop.dataset.rop); if(it){ it.reorderPoint=Math.max(0,parseInt(zNum(rop.value))||0); const ok=save(); if(ok) toast("✔ 発注点を保存"); $("#orderCount").textContent=(c=>c?`(${c})`:"")(state.items.filter(needsOrder).length); } }
+  else if(moq){ const it=item(moq.dataset.moq); if(it){ it.orderQty=Math.max(1,parseInt(zNum(moq.value))||1); save(); } }
+  else if(ar){ const it=item(ar.dataset.area); if(it){ it.area=ar.value; const ok=save(); renderMaster(); if(ok) toast("✔ 分野を変更"); } }
+});
+$("#masterArea").addEventListener("change", renderMaster);
+$("#masterSearch").addEventListener("input", renderMaster);
+$("#addItem").onclick=()=>openEdit(null);
+
+/* ---- 編集モーダル ---- */
+let editId=null;
+let pendingPhoto=null;               // {action:'set',blob} | {action:'del'} | null（保存確定時に反映）
+let editPhotoTempURL=null;           // モーダル内プレビュー用の一時objectURL
+function setPhotoPreview(url){
+  $("#f_photoPrev").innerHTML = url ? `<img alt="" src="${url}">` : "📦";
+}
+function clearEditPhotoTemp(){
+  if(editPhotoTempURL){ URL.revokeObjectURL(editPhotoTempURL); editPhotoTempURL=null; }
+  pendingPhoto=null;
+  $("#f_photoInput").value="";
+}
+function openEdit(id){
+  editId=id;
+  const it = id? item(id) : {supplier:"Ci",orderQty:1,stock:0,reorderPoint:0,area:"一般"};
+  $("#editTitle").textContent = id?"品目を編集":"品目を追加";
+  $("#f_area").innerHTML=areaOptions(it.area||"一般");
+  $("#f_name").value=it.name||""; $("#f_cat").value=it.category||"";
+  $("#f_sup").value=it.supplier||"Ci"; $("#f_code").value=it.code||"";
+  $("#f_price").value=it.price??""; $("#f_unit").value=it.unit||"";
+  $("#f_stock").value=it.stock??0; $("#f_rop").value=it.reorderPoint??0; $("#f_oq").value=it.orderQty??1;
+  $("#f_note").value=it.note||"";
+  $("#deleteItem").classList.toggle("hide", !id);
+  // 写真エリア初期化（既存写真は非同期で表示）
+  clearEditPhotoTemp();
+  setPhotoPreview(null);
+  const hasPhoto = !!(id && photoIds.has(id));
+  $("#f_photoDel").classList.toggle("hide", !hasPhoto);
+  if(hasPhoto){
+    getPhotoURL(id).then(url=>{ if(editId===id && !pendingPhoto && url) setPhotoPreview(url); });
+  }
+  $("#editModal").classList.add("open");
+}
+$("#f_photoInput").addEventListener("change", async e=>{
+  const file=e.target.files[0]; if(!file) return;
+  try{
+    const blob = await resizePhoto(file);
+    if(!blob) throw new Error("変換失敗");
+    pendingPhoto={action:"set", blob};
+    if(editPhotoTempURL) URL.revokeObjectURL(editPhotoTempURL);
+    editPhotoTempURL=URL.createObjectURL(blob);
+    setPhotoPreview(editPhotoTempURL);
+    $("#f_photoDel").classList.remove("hide");
+  }catch(err){ toast("⚠️ 写真の読み込みに失敗しました"); }
+  e.target.value="";
+});
+$("#f_photoDel").onclick=()=>{
+  pendingPhoto={action:"del"};
+  if(editPhotoTempURL){ URL.revokeObjectURL(editPhotoTempURL); editPhotoTempURL=null; }
+  setPhotoPreview(null);
+  $("#f_photoDel").classList.add("hide");
+};
+$("#cancelEdit").onclick=()=>{ clearEditPhotoTemp(); $("#editModal").classList.remove("open"); };
+$("#editModal").addEventListener("click",e=>{ if(e.target.id==="editModal"){ clearEditPhotoTemp(); $("#editModal").classList.remove("open"); } });
+$("#saveItem").onclick=async ()=>{
+  const name=$("#f_name").value.trim(); if(!name){ toast("品名を入力してください"); return; }
+  const data={ name, area:$("#f_area").value||"一般", category:$("#f_cat").value.trim(), supplier:$("#f_sup").value,
+    code:$("#f_code").value.trim(), price:parseInt(zNum($("#f_price").value))||0, unit:$("#f_unit").value.trim(),
+    stock:parseInt(zNum($("#f_stock").value))||0, reorderPoint:parseInt(zNum($("#f_rop").value))||0,
+    orderQty:Math.max(1,parseInt(zNum($("#f_oq").value))||1), note:$("#f_note").value.trim() };
+  let targetId=editId;
+  if(editId){ Object.assign(item(editId), data); }
+  else{ data.id=uid(); data.flag=false; data.incoming=0; state.items.push(data); targetId=data.id; }
+  const ok=save();
+  // ステージした写真を確定反映（id確定後）
+  if(pendingPhoto){
+    try{
+      if(pendingPhoto.action==="set"){ await photoPut(targetId, pendingPhoto.blob); photoIds.add(targetId); }
+      else if(pendingPhoto.action==="del"){ await photoDel(targetId); photoIds.delete(targetId); }
+      revokePhotoURL(targetId);
+    }catch(e){ console.warn("写真の保存に失敗", e); toast("⚠️ 写真の保存に失敗しました"); }
+  }
+  clearEditPhotoTemp();
+  $("#editModal").classList.remove("open"); render(); if(ok) toast("✔ 保存しました");
+};
+$("#deleteItem").onclick=()=>{ if(editId && confirm("この品目を削除しますか？")){
+  state.items=state.items.filter(x=>x.id!==editId);
+  photoDel(editId); photoIds.delete(editId); revokePhotoURL(editId);
+  clearEditPhotoTemp();
+  save(); $("#editModal").classList.remove("open"); render(); toast("削除しました"); } };
+
+/* ---------- 設定 ---------- */
+function renderSettings(){
+  $("#setAreas").value=(state.settings.areas||DEFAULT_AREAS).join(",");
+  $("#setFreeShip").value=state.settings.freeShip;
+  $("#setCiUrl").value=state.settings.ciUrl;
+  $("#setOriContact").value=state.settings.oriContact||"";
+}
+$("#saveSettings").onclick=()=>{
+  const areas=$("#setAreas").value.split(/[,、]/).map(s=>s.trim()).filter(Boolean);
+  if(areas.length){ if(!areas.includes("一般")) areas.unshift("一般"); state.settings.areas=areas; }
+  state.settings.freeShip=parseInt(zNum($("#setFreeShip").value))||5000;
+  state.settings.ciUrl=$("#setCiUrl").value.trim()||state.settings.ciUrl;
+  state.settings.oriContact=$("#setOriContact").value.trim();
+  const ok=save(); if(ok) toast("✔ 設定を保存しました");
+};
+
+/* ---------- CSV/JSON ---------- */
+function downloadCsv(rows, fname){
+  const csv=rows.map(r=>r.map(c=>{ const s=String(c==null?"":c); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }).join(",")).join("\r\n");
+  download("﻿"+csv, fname, "text/csv");
+}
+function download(text, fname, type){
+  const blob=new Blob([text],{type:type+";charset=utf-8"}); const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download=fname; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function copyText(txt,msg){
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(()=>toast(msg||"コピーしました"),()=>fallbackCopy(txt,msg)); }
+  else fallbackCopy(txt,msg);
+}
+function fallbackCopy(txt,msg){ const ta=document.createElement("textarea"); ta.value=txt; document.body.appendChild(ta); ta.select();
+  try{document.execCommand("copy");toast(msg||"コピーしました");}catch(e){toast("コピー失敗");} document.body.removeChild(ta); }
+
+const CSV_COLS=["名前","分野","カテゴリ","仕入先","商品コード","単価","入数","現在数","発注点","発注数","メモ"];
+$("#exportCsv").onclick=()=>{
+  const rows=[CSV_COLS];
+  state.items.forEach(it=>rows.push([it.name,it.area||"一般",it.category||"",it.supplier,it.code||"",it.price||0,it.unit||"",it.stock||0,it.reorderPoint||0,it.orderQty||1,it.note||""]));
+  downloadCsv(rows,"在庫マスタ_"+new Date().toISOString().slice(0,10)+".csv");
+};
+async function doExportJson(){
+  const obj = JSON.parse(JSON.stringify(state));
+  const photos = {};
+  try{
+    const keys = await photoKeys();
+    for(const id of keys){
+      const v = await photoGet(id);
+      if(!v) continue;
+      photos[id] = (typeof v==="string") ? v : await blobToDataURL(v);
+    }
+  }catch(e){ console.warn("写真の書き出しに失敗", e); }
+  obj.photos = photos;
+  download(JSON.stringify(obj,null,2),"在庫バックアップ_"+new Date().toISOString().slice(0,10)+".json","application/json");
+  toast(`⬇ バックアップを書き出しました（写真${Object.keys(photos).length}枚）`);
+}
+$("#exportJson").onclick=doExportJson;
+
+let importMode=null;
+$("#importCsv").onclick=()=>{ importMode="csv"; $("#fileInput").click(); };
+$("#importJson").onclick=()=>{ importMode="json"; $("#fileInput").click(); };
+$("#fileInput").addEventListener("change", e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const rd=new FileReader();
+  rd.onload=()=>{ try{
+      if(importMode==="json"){ importJson(rd.result).catch(err=>toast("取込失敗: "+err.message)); }
+      else importCsv(rd.result);
+    }catch(err){ toast("取込失敗: "+err.message); } $("#fileInput").value=""; };
+  rd.readAsText(file,"utf-8");
+});
+async function importJson(text){
+  const p=JSON.parse(text);
+  if(!Array.isArray(p.items)) throw new Error("形式が不正（items が配列でない）");
+  // 保存前に全行を検証（1件でも品名が無ければ中断）
+  for(const it of p.items){
+    if(!it || typeof it!=="object" || typeof it.name!=="string" || !it.name.trim())
+      throw new Error("形式が不正（品名のない品目があります）");
+  }
+  if(!confirm("現在のデータを置き換えて復元しますか？")) return;
+  state.items=p.items; state.settings=Object.assign(state.settings,p.settings||{}); state.counts=p.counts||{};
+  state.excluded=p.excluded||{};
+  state.history=Array.isArray(p.history)?p.history:[];
+  state.items.forEach(it=>{ if(it.incoming==null) it.incoming=0; });
+  const ok=save();
+  // 写真の復元（バックアップに含まれていれば全置換）
+  if(p.photos && typeof p.photos==="object"){
+    let n=0;
+    try{
+      await photoClear();
+      Array.from(photoURLCache.keys()).forEach(revokePhotoURL);
+      photoIds=new Set();
+      for(const id of Object.keys(p.photos)){
+        try{ await photoPut(id, dataURLToBlob(p.photos[id])); photoIds.add(id); n++; }
+        catch(e){ console.warn("写真復元失敗", id, e); }
+      }
+    }catch(e){ console.warn("写真の復元に失敗", e); }
+    render(); if(ok) toast(`✔ 復元しました（写真${n}枚）`);
+  }else{
+    render(); if(ok) toast("✔ 復元しました");
+  }
+}
+// 全文走査（引用符内の改行も許容）→ 行×列の2次元配列
+function parseCsv(text){
+  const rows=[]; let row=[], cur="", q=false;
+  for(let i=0;i<text.length;i++){ const ch=text[i];
+    if(q){
+      if(ch=='"'){ if(text[i+1]=='"'){ cur+='"'; i++; } else q=false; }
+      else cur+=ch;
+    }else{
+      if(ch=='"') q=true;
+      else if(ch==',') { row.push(cur); cur=""; }
+      else if(ch=='\n'){ row.push(cur); rows.push(row); row=[]; cur=""; }
+      else if(ch=='\r'){ if(text[i+1]!='\n'){ row.push(cur); rows.push(row); row=[]; cur=""; } }
+      else cur+=ch;
+    }
+  }
+  if(cur!=="" || row.length){ row.push(cur); rows.push(row); }
+  return rows.filter(r=>!(r.length===1 && r[0].trim()===""));  // 空行を除去
+}
+// CSV取込: まず方法選択モーダルを開く（実処理は applyCsvImport）
+let pendingCsvText=null;
+function importCsv(text){ pendingCsvText=text; $("#csvModal").classList.add("open"); }
+async function applyCsvImport(mode){   // mode: "add" | "replace"
+  $("#csvModal").classList.remove("open");
+  const text=pendingCsvText; pendingCsvText=null;
+  if(!text) return;
+  try{
+    const rows=parseCsv(text.replace(/^﻿/,""));
+    if(!rows.length) throw new Error("空ファイル");
+    const header=rows[0].map(h=>h.trim());
+    const idx=n=>header.indexOf(n);
+    const parsed=[];
+    for(let i=1;i<rows.length;i++){ const c=rows[i];
+      const name=(c[idx("名前")]||"").trim(); if(!name) continue;
+      let sup=(c[idx("仕入先")]||"Ci").trim(); if(sup!=="Ci"&&sup!=="オリエンタル") sup="Ci";
+      const cat=(c[idx("カテゴリ")]||"").trim();
+      const area=(idx("分野")>=0?(c[idx("分野")]||"").trim():"") || assignArea(name,cat);
+      parsed.push({ name, area, category:cat, supplier:sup,
+        code:(c[idx("商品コード")]||"").trim(), price:parseInt(zNum(c[idx("単価")]))||0, unit:(c[idx("入数")]||"").trim(),
+        stock:parseInt(zNum(c[idx("現在数")]))||0, reorderPoint:parseInt(zNum(c[idx("発注点")]))||0,
+        orderQty:Math.max(1,parseInt(zNum(c[idx("発注数")]))||1), note:(c[idx("メモ")]||"").trim(), flag:false, incoming:0 }); }
+    if(!parsed.length) throw new Error("有効な行がありません");
+    if(mode==="add"){
+      parsed.forEach(r=>{ r.id=uid(); });
+      state.items = state.items.concat(parsed);
+      const ok=save(); render(); if(ok) toast(`✔ ${parsed.length}件を追加取込しました`);
+    }else{
+      // 全置換: 既存id引き継ぎ（写真・棚卸し入力を温存）
+      const byCode=new Map(), byName=new Map();
+      state.items.forEach(it=>{
+        if(it.code) byCode.set(it.supplier+" "+it.code, it.id);
+        byName.set(it.supplier+" "+it.name, it.id);
+      });
+      const usedIds=new Set();
+      parsed.forEach(r=>{
+        let id=null;
+        if(r.code){ const k=r.supplier+" "+r.code; const cand=byCode.get(k); if(cand && !usedIds.has(cand)) id=cand; }
+        if(!id){ const k=r.supplier+" "+r.name; const cand=byName.get(k); if(cand && !usedIds.has(cand)) id=cand; }
+        if(!id) id=uid();
+        usedIds.add(id); r.id=id;
+      });
+      state.items = parsed;
+      // 新itemsに存在しない写真を掃除
+      try{
+        const keys=await photoKeys();
+        const alive=new Set(parsed.map(r=>r.id));
+        for(const pid of keys){ if(!alive.has(pid)){ await photoDel(pid); photoIds.delete(pid); revokePhotoURL(pid); } }
+      }catch(e){ console.warn("写真掃除失敗", e); }
+      const ok=save(); render(); if(ok) toast(`✔ ${parsed.length}件で全置換しました`);
+    }
+  }catch(err){ toast("取込失敗: "+err.message); }
+}
+$("#csvAdd").onclick=()=>applyCsvImport("add");
+$("#csvReplace").onclick=()=>applyCsvImport("replace");
+$("#csvCancel").onclick=()=>{ $("#csvModal").classList.remove("open"); pendingCsvText=null; };
+$("#csvModal").addEventListener("click", e=>{ if(e.target.id==="csvModal"){ $("#csvModal").classList.remove("open"); pendingCsvText=null; } });
+
+$("#loadSample").onclick=()=>{
+  if(state.items.length && !confirm("サンプルを追加します。よろしいですか？")) return;
+  const s=[
+    ["ラテックスグローブ M","消耗品","Ci","GL-M100",980,"1箱100枚",4,3,6],
+    ["紙エプロン","消耗品","Ci","EP-500",1200,"1箱500枚",2,2,3],
+    ["ディスポミラー","器材","Ci","MR-50",1500,"1箱50本",1,2,2],
+    ["アルジネート印象材","印象材","オリエンタル","",2200,"1袋",1,1,2],
+    ["ボンディング材","材料","オリエンタル","",6800,"1本",2,1,1],
+    ["フッ素バーニッシュ","予防","Ci","FL-30",3200,"1箱30個",5,3,4],
+  ].map(a=>({id:uid(),name:a[0],category:a[1],area:assignArea(a[0],a[1]),supplier:a[2],code:a[3],price:a[4],unit:a[5],stock:a[6],reorderPoint:a[7],orderQty:a[8],note:"",flag:false}));
+  state.items=state.items.concat(s); save(); render(); toast("✔ サンプルを投入しました");
+};
+$("#wipe").onclick=()=>{ if(confirm("すべてのデータを消去します。写真・履歴も消えます。よろしいですか？（バックアップ推奨）")){
+  state.items=[]; state.counts={}; state.excluded={}; state.history=[];
+  photoClear(); Array.from(photoURLCache.keys()).forEach(revokePhotoURL); photoIds=new Set();
+  save(); render(); toast("消去しました"); } };
+
+/* ---------- render dispatch ---------- */
+function render(){
+  const active=$("#nav button.active").dataset.tab;
+  if(active==="stock") renderStock();
+  else if(active==="order") renderOrder();
+  else if(active==="count") renderCount();
+  else if(active==="master"){ renderMaster(); renderSettings(); }
+  // 発注バッジは常に更新
+  const c=state.items.filter(needsOrder).length; $("#orderCount").textContent=c?`(${c})`:"";
+}
+
+/* ---------- Service Worker（https/localhost配信時のみ。file://では自動スキップ） ---------- */
+if("serviceWorker" in navigator && (location.protocol==="https:" || ["localhost","127.0.0.1"].includes(location.hostname))){
+  navigator.serviceWorker.register("sw.js").catch(e=>console.warn("SW登録失敗", e));
+  // 新しいSWが有効になったら自動リロード（「開き直すだけ」で最新化。アイコン削除→再追加は厳禁）
+  let reloaded=false;
+  navigator.serviceWorker.addEventListener("controllerchange", ()=>{ if(reloaded) return; reloaded=true; location.reload(); });
+}
+
+/* ---------- init ---------- */
+$("#verBadge").textContent="v"+APP_VERSION;
+function init(){
+  load(); render();                       // 先に画面を出す（IndexedDBハング時も操作可能に）
+  photoKeys().then(ks=>{ photoIds=ks; render(); })
+    .catch(e=>console.warn("写真一覧の読込に失敗", e));
+}
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "在庫発注",
+  "short_name": "在庫発注",
+  "description": "はた歯科医院 在庫確認・発注・棚卸しアプリ",
+  "lang": "ja",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f6f9",
+  "theme_color": "#0d6ea3",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
